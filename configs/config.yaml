@@ -5,7 +5,7 @@ fit_body_model_optimization:
   iterations: 500
   lr: 0.1
   start_lr_decay_iteration:  450
-  body_model: smpl
+  body_model: smpl # options: smpl, smplx (smplx is experimental)
   use_landmarks: SMPL_INDEX_LANDMARKS # either "All", name of dict from landmarks.py or list of landmark names ["Lt. 10th Rib", "Lt. Dactylion",..]
 
 fit_vertices_optimization:
@@ -27,7 +27,7 @@ refine_bm_fitting:
   iterations: 500
   lr: 0.01
   start_lr_decay_iteration:  450
-  body_model: smpl
+  body_model: smpl # options: smpl, smplx (smplx is experimental)
   use_landmarks: null # either "All", name of dict from landmarks.py or list of landmark names ["Lt. 10th Rib", "Lt. Dactylion",..]
   refine_params: ["pose"] #["pose", "shape", "transl", "scale"]
   use_losses: ["normal"]
@@ -42,7 +42,7 @@ general:
   experiment_name: "Fitting" 
 
 paths:
-  body_models_path: /SMPL-Fitting/data/body_models
+  body_models_path: /SMPL-Fitting/data/body_models  # Expected structure: smpl/ and smplx/ subdirectories
   prior_path: /SMPL-Fitting/data/prior
   save_path: /SMPL-Fitting/results
 
