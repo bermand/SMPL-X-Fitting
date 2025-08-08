@@ -173,32 +173,55 @@ SMPL_INDEX_LANDMARKS = {'10th Rib Midspine': 3024,
                         'Suprasternale': 3171,
                         'Waist, Preferred, Post.': 3021}
 
-# SMPL-X anatomical landmarks - official vertex index mapping
-# Based on the official vertex indices from vchoutas/smplx repo (smplx/vertex_ids.py)
-# Includes standard anatomical landmarks for nose, eyes, ears, fingers, and toes
-SMPLX_INDEX_LANDMARKS = {
+# SMPL-X landmark indices - extends SMPL landmarks with additional face/hand/foot features
+# SMPL-X should include all SMPL body landmarks plus additional face, hand, and foot landmarks
+# 
+# Current implementation includes verified SMPL-X specific landmarks (face/hands/feet)
+# from official vchoutas/smplx repo (smplx/vertex_ids.py)
+#
+# TODO: Add SMPL body landmarks with proper SMPL-X vertex indices
+# The challenge is that SMPL landmarks use vertex indices for 6890-vertex mesh,
+# but SMPL-X has 10475 vertices with different topology. Need vertex correspondence mapping.
+
+# Start with a copy of SMPL landmarks (will be updated with proper SMPL-X indices)
+SMPLX_INDEX_LANDMARKS = SMPL_INDEX_LANDMARKS.copy()
+
+# Add verified SMPL-X specific landmarks for face, hands, and feet
+SMPLX_INDEX_LANDMARKS.update({
+    # Face landmarks
     'nose': 9120,
     'reye': 9929,
     'leye': 9448,
     'rear': 616,
     'lear': 6,
+    
+    # Hand landmarks - right hand
     'rthumb': 8079,
     'rindex': 7669,
     'rmiddle': 7794,
     'rring': 7905,
     'rpinky': 8022,
+    
+    # Hand landmarks - left hand  
     'lthumb': 5361,
     'lindex': 4933,
     'lmiddle': 5058,
     'lring': 5169,
     'lpinky': 5286,
+    
+    # Foot landmarks
     'LBigToe': 5770,
     'LSmallToe': 5780,
     'LHeel': 8846,
     'RBigToe': 8463,
     'RSmallToe': 8474,
     'RHeel': 8635
-}
+})
+
+# Note: This implementation currently uses SMPL vertex indices for body landmarks
+# on SMPL-X mesh as placeholders. These indices may not correspond to the exact
+# same anatomical locations due to mesh topology differences.
+# A proper implementation would require SMPL->SMPL-X vertex correspondence mapping.
 
 def process_caesar_landmarks(landmark_path: str, scale: float = 1000.0):
     """

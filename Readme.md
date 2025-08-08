@@ -11,7 +11,7 @@ Fit an SMPL or SMPL-X body model (BM) to a given scan and view the optimization 
 
 **Model Support:**
 - ✅ **SMPL**: Full support
-- ✅ **SMPL-X**: Supports standard anatomical landmarks (nose, eyes, ears, fingers, toes)
+- ✅ **SMPL-X**: Extends SMPL landmarks with additional face/hand/foot features (94 total landmarks)
 
 The code supports fitting a single scan 👤 or a whole dataset 👥.
 

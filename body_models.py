@@ -113,9 +113,14 @@ class SMPLXBodyModel():
     Extended SMPL-X body model class used for optimization
     in order to deform the vertices with pose, shape, 
     scale and translation parameters.
-    Supports standard SMPL-X anatomical landmarks including
-    facial features (nose, eyes, ears), hand landmarks 
-    (fingers), and foot landmarks (toes, heels).
+    
+    Supports extended landmark set that includes:
+    - All original SMPL body landmarks (73 landmarks from CAESAR dataset)
+    - Additional SMPL-X specific landmarks for face, hands, and feet (21 landmarks)
+    - Total: 94 anatomical landmarks
+    
+    Note: Currently uses SMPL vertex indices for body landmarks as placeholders.
+    Proper implementation would require SMPL->SMPL-X vertex correspondence mapping.
     """
     
     def __init__(self, cfg: dict):
