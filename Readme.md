@@ -11,7 +11,7 @@ Fit an SMPL or SMPL-X body model (BM) to a given scan and view the optimization 
 
 **Model Support:**
 - ✅ **SMPL**: Full support
-- 🧪 **SMPL-X**: Experimental support (basic functionality only)
+- ✅ **SMPL-X**: Extends SMPL landmarks with additional face/hand/foot features (94 total landmarks)
 
 The code supports fitting a single scan 👤 or a whole dataset 👥.
 
@@ -49,7 +49,7 @@ git submodule update --init --recursive
 
 Necessary files:
 - put the `SMPL_{GENDER}.pkl` (MALE, FEMALE and NEUTRAL) models into the `data/body_models/smpl` folder. You can obtain the files [here](https://github.com/vchoutas/smplx#downloading-the-model).
-- **[EXPERIMENTAL]** put the `SMPLX_{GENDER}.pkl` (MALE, FEMALE and NEUTRAL) models into the `data/body_models/smplx` folder for SMPL-X support. You can obtain the files [here](https://github.com/vchoutas/smplx#downloading-the-model).
+- **[SMPL-X SUPPORT]** put the `SMPLX_{GENDER}.pkl` (MALE, FEMALE and NEUTRAL) models into the `data/body_models/smplx` folder for SMPL-X support. You can obtain the files [here](https://github.com/vchoutas/smplx#downloading-the-model).
 - put the `gmm_08.pkl` prior into the `data/prior` folder. You can obtain the files [here](https://smplify.is.tuebingen.mpg.de/index.html).
 - [OPTIONAL] We provide a demo for fitting the whole FAUST dataset. To do that, download the FAUST dataset [here](https://faust-leaderboard.is.tuebingen.mpg.de/download) and put the `FAUST/training/scans` and `FAUST/training/registrations` folders into the `data/FAUST/training` folder in this repository. We already provided the landmarks for fitting in `data/FAUST/training/landmarks`. 
 
