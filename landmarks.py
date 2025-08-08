@@ -173,10 +173,32 @@ SMPL_INDEX_LANDMARKS = {'10th Rib Midspine': 3024,
                         'Suprasternale': 3171,
                         'Waist, Preferred, Post.': 3021}
 
-# SMPL-X landmarks placeholder - experimental support
-# TODO: Replace with proper SMPL-X landmark indices when available
-# For now, using SMPL landmarks as placeholders for basic functionality
-SMPLX_INDEX_LANDMARKS = SMPL_INDEX_LANDMARKS.copy()
+# SMPL-X anatomical landmarks - official vertex index mapping
+# Based on the official vertex indices from vchoutas/smplx repo (smplx/vertex_ids.py)
+# Includes standard anatomical landmarks for nose, eyes, ears, fingers, and toes
+SMPLX_INDEX_LANDMARKS = {
+    'nose': 9120,
+    'reye': 9929,
+    'leye': 9448,
+    'rear': 616,
+    'lear': 6,
+    'rthumb': 8079,
+    'rindex': 7669,
+    'rmiddle': 7794,
+    'rring': 7905,
+    'rpinky': 8022,
+    'lthumb': 5361,
+    'lindex': 4933,
+    'lmiddle': 5058,
+    'lring': 5169,
+    'lpinky': 5286,
+    'LBigToe': 5770,
+    'LSmallToe': 5780,
+    'LHeel': 8846,
+    'RBigToe': 8463,
+    'RSmallToe': 8474,
+    'RHeel': 8635
+}
 
 def process_caesar_landmarks(landmark_path: str, scale: float = 1000.0):
     """
