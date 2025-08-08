@@ -173,6 +173,11 @@ SMPL_INDEX_LANDMARKS = {'10th Rib Midspine': 3024,
                         'Suprasternale': 3171,
                         'Waist, Preferred, Post.': 3021}
 
+# SMPL-X landmarks placeholder - experimental support
+# TODO: Replace with proper SMPL-X landmark indices when available
+# For now, using SMPL landmarks as placeholders for basic functionality
+SMPLX_INDEX_LANDMARKS = SMPL_INDEX_LANDMARKS.copy()
+
 def process_caesar_landmarks(landmark_path: str, scale: float = 1000.0):
     """
     Process CAESAR dataset landmarks from .lnd file. 
