@@ -39,7 +39,8 @@ general:
   verbose: False
   default_dtype: torch.float32
   pause_script_after_fitting: True
-  experiment_name: "Fitting" 
+  experiment_name: "Fitting"
+  device: cuda # cuda or cpu - automatically falls back to cpu if cuda not available 
 
 paths:
   body_models_path: /SMPL-Fitting/data/body_models

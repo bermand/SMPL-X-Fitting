@@ -69,8 +69,14 @@ class SMPLBodyModel():
         return [self.all_landmark_indices[k] for k in landmarks_order]
 
 
+    def to(self, device):
+        """Move model to specified device"""
+        self.body_model.to(device)
+        return self
+
     def cuda(self):
-        self.body_model.cuda()
+        """Backward compatibility method"""
+        return self.to(torch.device("cuda"))
 
     def __call__(self, pose, betas, **kwargs):
 
