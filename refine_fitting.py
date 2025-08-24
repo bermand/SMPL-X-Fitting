@@ -15,7 +15,7 @@ from utils import (check_scan_prequisites_fit_bm, cleanup, get_normals,
                    get_already_fitted_scan_names, get_skipped_scan_names, 
                    initialize_fit_bm_loss_weights, load_loss_weights_config, 
                    print_loss_weights, print_losses, print_params, 
-                   process_body_model_path, process_default_dtype, 
+                   process_body_model_path, process_default_dtype, process_device_config,
                    process_landmarks, process_visualize_steps, 
                    create_results_directory, to_txt,
                    setup_socket, send_to_socket,
@@ -48,6 +48,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
     VISUALIZE_LOGSCALE = cfg["error_curves_logscale"]
     SAVE_PATH = cfg['save_path']
     SOCKET_TYPE = cfg["socket_type"]
+    DEVICE = cfg['device']
     
     if VISUALIZE:
         socket = cfg["socket"]
@@ -74,7 +75,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
         os.makedirs(SAVE_PATH)
 
     # process inputs
-    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(DEVICE)
     input_faces = torch.from_numpy(input_faces).type(DEFAULT_DTYPE) if \
                             (not isinstance(input_faces,type(None))) else None
 
@@ -82,14 +83,14 @@ def fit_body_model(input_dict: dict, cfg: dict):
         landmarks_order = sorted(list(input_landmarks.keys()))
         input_landmarks = np.array([input_landmarks[k] for k in landmarks_order])
         input_landmarks = torch.from_numpy(input_landmarks)
-        input_landmarks = input_landmarks.type(DEFAULT_DTYPE).cuda()
+        input_landmarks = input_landmarks.type(DEFAULT_DTYPE).to(DEVICE)
     else:
         input_landmarks = []
         landmarks_order = []
 
     if USE_NORMALS:
         input_normals = get_normals(input_vertices[0].detach().cpu())
-        input_normals = input_normals.cuda() # (N,3)
+        input_normals = input_normals.to(DEVICE) # (N,3)
     else:
         input_normals = None
         template_normals = None
@@ -98,9 +99,9 @@ def fit_body_model(input_dict: dict, cfg: dict):
     cfg["body_model_gender"] = input_gender
     cfg["body_model_num_betas"] = input_shape_dim
     body_model = BodyModel(cfg)
-    body_model.cuda()
+    body_model.to(DEVICE)
     cfg["init_params"] = {"pose":input_pose, "shape":input_shape, "trans":input_trans}
-    body_model_params = BodyParameters(cfg).cuda()
+    body_model_params = BodyParameters(cfg).to(DEVICE)
     body_model_landmark_inds = body_model.landmark_indices(landmarks_order)
     print(f"Using {len(input_landmarks)}/{len(body_model.all_landmark_indices)} landmarks.")
 
@@ -122,10 +123,10 @@ def fit_body_model(input_dict: dict, cfg: dict):
 
 
     if VISUALIZE:
-        starting_verts = body_model.deform_verts(input_pose.cuda(),
-                                                input_shape.cuda(),
-                                                input_trans.cuda(),
-                                                torch.ones(1).cuda()*1).detach().cpu()
+        starting_verts = body_model.deform_verts(input_pose.to(DEVICE),
+                                                input_shape.to(DEVICE),
+                                                input_trans.to(DEVICE),
+                                                torch.ones(1, device=DEVICE)*1).detach().cpu()
         fig = set_init_plot(input_vertices[0].detach().cpu(), 
                             starting_verts,  
                             title=f"Fitting ({input_name}) - initial setup",
@@ -158,7 +159,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
 
         if USE_NORMALS:
             template_normals = get_normals(body_model_verts.detach().cpu())
-            template_normals = template_normals.cuda() # (6890,3)
+            template_normals = template_normals.to(DEVICE) # (6890,3)
 
         # compute loss
         loss_dict = dict(scan_vertices=input_vertices,
@@ -354,6 +355,7 @@ if __name__ == "__main__":
     cfg["save_path"] = create_results_directory(save_path=cfg["save_path"], 
                                                 continue_run=cfg["continue_run"])
     cfg = process_default_dtype(cfg)
+    cfg = process_device_config(cfg)
     cfg = process_visualize_steps(cfg)
     cfg = process_landmarks(cfg)
     cfg = process_body_model_path(cfg)

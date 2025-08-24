@@ -15,7 +15,7 @@ from utils import (check_scan_prequisites_fit_bm, cleanup,
                    get_already_fitted_scan_names, get_skipped_scan_names, 
                    initialize_fit_bm_loss_weights, load_loss_weights_config, 
                    print_loss_weights, print_losses, print_params, 
-                   process_body_model_path, process_default_dtype, 
+                   process_body_model_path, process_default_dtype, process_device_config,
                    process_landmarks, process_visualize_steps, 
                    create_results_directory, to_txt,
                    setup_socket, send_to_socket,
@@ -48,6 +48,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
     VISUALIZE_LOGSCALE = cfg["error_curves_logscale"]
     SAVE_PATH = cfg['save_path']
     SOCKET_TYPE = cfg["socket_type"]
+    DEVICE = cfg['device']
     
     if VISUALIZE:
         socket = cfg["socket"]
@@ -60,19 +61,19 @@ def fit_body_model(input_dict: dict, cfg: dict):
     input_index = input_dict["scan_index"]
 
     # process inputs
-    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(DEVICE)
     input_faces = torch.from_numpy(input_faces).type(DEFAULT_DTYPE) if \
                             (not isinstance(input_faces,type(None))) else None
 
     landmarks_order = sorted(list(input_landmarks.keys()))
     input_landmarks = np.array([input_landmarks[k] for k in landmarks_order])
     input_landmarks = torch.from_numpy(input_landmarks)
-    input_landmarks = input_landmarks.type(DEFAULT_DTYPE).cuda()
+    input_landmarks = input_landmarks.type(DEFAULT_DTYPE).to(DEVICE)
 
     # setup body model
     body_model = BodyModel(cfg)
-    body_model.cuda()
-    body_model_params = BodyParameters(cfg).cuda()
+    body_model.to(DEVICE)
+    body_model_params = BodyParameters(cfg).to(DEVICE)
     body_model_landmark_inds = body_model.landmark_indices(landmarks_order)
     print(f"Using {len(input_landmarks)}/{len(body_model.all_landmark_indices)} landmarks.")
 
@@ -87,7 +88,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
     body_optimizer = torch.optim.Adam(body_model_params.parameters(), lr=LR)
     chamfer_distance = ChamferDistance()
     prior = MaxMixturePrior(prior_folder=cfg["prior_path"], num_gaussians=8)
-    prior = prior.cuda()
+    prior = prior.to(DEVICE)
 
 
 
@@ -276,12 +277,16 @@ if __name__ == "__main__":
     parser_scan.add_argument("--landmark_path", type=str, required=True)
     parser_scan.add_argument("--scale_landmarks", type=float, default=1.0,
                              help="Scale (divide) the scan landmarks by this factor.")
+    parser_scan.add_argument("--device", type=str, default=None,
+                             help="Device to use: 'cuda', 'cpu', 'auto', or 'cuda:0', etc. Overrides config.yaml setting.")
     parser_scan.set_defaults(func=fit_body_model_onto_scan)
 
     parser_dataset = subparsers.add_parser('onto_dataset')
     parser_dataset.add_argument("-D","--dataset_name", type=str, required=True)
     parser_dataset.add_argument("-C", "--continue_run", type=str, default=None,
         help="Path to results folder of YYYY_MM_DD_HH_MM_SS format to continue fitting.")
+    parser_dataset.add_argument("--device", type=str, default=None,
+                             help="Device to use: 'cuda', 'cpu', 'auto', or 'cuda:0', etc. Overrides config.yaml setting.")
     parser_dataset.set_defaults(func=fit_body_model_onto_dataset)
     
     args = parser.parse_args()
@@ -314,6 +319,10 @@ if __name__ == "__main__":
     cfg["save_path"] = create_results_directory(cfg["save_path"], 
                                                 cfg["continue_run"])
     cfg = process_default_dtype(cfg)
+    # Override device from command line if provided
+    if hasattr(args, 'device') and args.device is not None:
+        cfg["device"] = args.device
+    cfg = process_device_config(cfg)
     cfg = process_visualize_steps(cfg)
     cfg = process_landmarks(cfg)
     cfg = process_body_model_path(cfg)

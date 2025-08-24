@@ -14,7 +14,7 @@ from utils import (check_scan_prequisites_fit_verts, cleanup,
                    get_normals, get_skipped_scan_names, initialize_A, 
                    initialize_fit_verts_loss_weights, load_config, load_landmarks,
                    load_loss_weights_config, load_scan, process_body_model_fit_verts, 
-                   process_body_model_path, process_dataset_name, process_default_dtype, 
+                   process_body_model_path, process_dataset_name, process_default_dtype, process_device_config,
                    process_landmarks, process_visualize_steps, rotate_points_homo, 
                    save_configs, send_to_socket, setup_socket,
                    set_seed, to_txt, update_normals)
@@ -45,6 +45,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
     VISUALIZE_LOGSCALE = cfg["error_curves_logscale"]
     SAVE_PATH = cfg['save_path']
     SOCKET_TYPE = cfg["socket_type"]
+    DEVICE = cfg['device']
     
     if VISUALIZE:
         socket = cfg["socket"]
@@ -56,14 +57,14 @@ def fit_vertices(input_dict: dict, cfg: dict):
     USE_LANDMARKS = False if isinstance(scan_landmarks,type(None)) else True
     scan_index = input_dict.get("scan_index", 0)
     
-    scan_vertices = torch.from_numpy(scan_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+    scan_vertices = torch.from_numpy(scan_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(DEVICE)
     if USE_LANDMARKS:
         landmarks_order = sorted(list(scan_landmarks.keys()))
         scan_landmarks = np.array([scan_landmarks[k] for k in landmarks_order])
         scan_landmarks = torch.from_numpy(scan_landmarks)
-        scan_landmarks = scan_landmarks.type(DEFAULT_DTYPE).cuda()
+        scan_landmarks = scan_landmarks.type(DEFAULT_DTYPE).to(DEVICE)
     scan_normals = get_normals(scan_vertices[0].detach().cpu())
-    scan_normals = scan_normals.cuda()
+    scan_normals = scan_normals.to(DEVICE)
 
 
     # set template data
@@ -77,7 +78,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
         template_dict = np.load(fit_path)
         
         template_vertices = template_dict["vertices"]
-        template_vertices = torch.from_numpy(template_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+        template_vertices = torch.from_numpy(template_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(DEVICE)
         
         body_model = BodyModel(cfg)
     else:
@@ -85,7 +86,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
             cfg["start_from_body_model"] = "smpl"
         body_model = BodyModel(cfg)
         
-        template_vertices = body_model.verts_t_pose.unsqueeze(0).cuda() # (1,N,3)
+        template_vertices = body_model.verts_t_pose.unsqueeze(0).to(DEVICE) # (1,N,3)
 
     if USE_LANDMARKS:
         template_landmark_inds = body_model.landmark_indices(landmarks_order)
@@ -93,7 +94,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
     
 
     template_normals = get_normals(template_vertices[0].detach().cpu())
-    template_normals = template_normals.cuda()
+    template_normals = template_normals.to(DEVICE)
     template_vertices_N = template_vertices.shape[1]
 
     # visualize starting fitting point
@@ -109,14 +110,13 @@ def fit_vertices(input_dict: dict, cfg: dict):
     LR = cfg['lr']
     STOP_AT_LOSS_VALUE = float(cfg["stop_at_loss_value"])
     STOP_AT_LOSS_DIFFERENCE = float(cfg["stop_at_loss_difference"])
-    A = initialize_A(template_vertices_N, cfg["random_init_A"])
-    A = A.cuda()
+    A = initialize_A(template_vertices_N, cfg["random_init_A"], DEVICE)
     optimizer = torch.optim.LBFGS([A], lr=LR)
     loss_func = losses.Losses(cfg, cfg["loss_weights"])
     transform_points = rotate_points_homo
 
-    loss_current = torch.Tensor([10]).cuda()
-    loss_previous = torch.Tensor([100]).cuda()
+    loss_current = torch.tensor([10], device=DEVICE)
+    loss_previous = torch.tensor([100], device=DEVICE)
     global closure_call
     closure_call = 0
     closure_calls = []
@@ -303,6 +303,7 @@ if __name__ == "__main__":
     cfg["save_path"] = create_results_directory(cfg["save_path"], 
                                                 cfg["continue_run"])
     cfg = process_default_dtype(cfg)
+    cfg = process_device_config(cfg)
     cfg = process_visualize_steps(cfg)
     cfg = process_body_model_fit_verts(cfg)
     cfg = process_body_model_path(cfg)
