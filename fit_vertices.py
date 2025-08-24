@@ -262,6 +262,8 @@ if __name__ == "__main__":
         help="Path to fitting folder of YYYY_MM_DD_HH_MM_SS format after running fit_body_model.py")
     parser_scan.add_argument("--start_from_body_model", type=str, default=None,
         help="Name of body model to start fitting from.")
+    parser_scan.add_argument("--device", type=str, default=None,
+                             help="Device to use: 'cuda', 'cpu', 'auto', or 'cuda:0', etc. Overrides config.yaml setting.")
     parser_scan.set_defaults(func=fit_vertices_onto_scan)
 
     parser_dataset = subparsers.add_parser('onto_dataset')
@@ -272,6 +274,8 @@ if __name__ == "__main__":
         help="Path to fitting folder of YYYY_MM_DD_HH_MM_SS format after running fit_body_model.py")
     parser_dataset.add_argument("--start_from_body_model", type=str, default=None,
         help="Name of body model to start fitting from.")
+    parser_dataset.add_argument("--device", type=str, default=None,
+                             help="Device to use: 'cuda', 'cpu', 'auto', or 'cuda:0', etc. Overrides config.yaml setting.")
     parser_dataset.set_defaults(func=fit_vertices_onto_dataset)
     
     args = parser.parse_args()
@@ -303,6 +307,9 @@ if __name__ == "__main__":
     cfg["save_path"] = create_results_directory(cfg["save_path"], 
                                                 cfg["continue_run"])
     cfg = process_default_dtype(cfg)
+    # Override device from command line if provided
+    if hasattr(args, 'device') and args.device is not None:
+        cfg["device"] = args.device
     cfg = process_device_config(cfg)
     cfg = process_visualize_steps(cfg)
     cfg = process_body_model_fit_verts(cfg)

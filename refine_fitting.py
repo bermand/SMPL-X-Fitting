@@ -317,12 +317,16 @@ if __name__ == "__main__":
     parser_scan.add_argument("--landmark_path", type=str, required=True)
     parser_scan.add_argument("--scale_landmarks", type=float, default=1.0,
                              help="Scale (divide) the scan landmarks by this factor.")
+    parser_scan.add_argument("--device", type=str, default=None,
+                             help="Device to use: 'cuda', 'cpu', 'auto', or 'cuda:0', etc. Overrides config.yaml setting.")
     parser_scan.set_defaults(func=fit_body_model_onto_scan)
 
     parser_dataset = subparsers.add_parser('onto_dataset')
     parser_dataset.add_argument("-D","--dataset_name", type=str, required=True)
     parser_dataset.add_argument("-C", "--continue_run", type=str, default=None,
         help="Path to results folder of YYYY_MM_DD_HH_MM_SS format to continue fitting.")
+    parser_dataset.add_argument("--device", type=str, default=None,
+                             help="Device to use: 'cuda', 'cpu', 'auto', or 'cuda:0', etc. Overrides config.yaml setting.")
     parser_dataset.set_defaults(func=fit_body_model_onto_dataset)
     
     args = parser.parse_args()
@@ -355,6 +359,9 @@ if __name__ == "__main__":
     cfg["save_path"] = create_results_directory(save_path=cfg["save_path"], 
                                                 continue_run=cfg["continue_run"])
     cfg = process_default_dtype(cfg)
+    # Override device from command line if provided
+    if hasattr(args, 'device') and args.device is not None:
+        cfg["device"] = args.device
     cfg = process_device_config(cfg)
     cfg = process_visualize_steps(cfg)
     cfg = process_landmarks(cfg)
