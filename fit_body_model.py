@@ -65,9 +65,33 @@ def fit_body_model(input_dict: dict, cfg: dict):
     input_faces = torch.from_numpy(input_faces).type(DEFAULT_DTYPE) if \
                             (not isinstance(input_faces,type(None))) else None
 
+    # Process landmarks with validation for SMPL-X compatibility
     landmarks_order = sorted(list(input_landmarks.keys()))
-    input_landmarks = np.array([input_landmarks[k] for k in landmarks_order])
-    input_landmarks = torch.from_numpy(input_landmarks)
+    
+    # Validate and filter landmarks to ensure they have valid 3D coordinates
+    valid_landmarks = {}
+    for landmark_name in landmarks_order:
+        landmark_coords = input_landmarks[landmark_name]
+        # Check if landmark coordinates are valid (should be array-like with 3 elements)
+        if (hasattr(landmark_coords, '__len__') and 
+            len(landmark_coords) == 3 and 
+            not np.any(np.isnan(landmark_coords))):
+            valid_landmarks[landmark_name] = np.array(landmark_coords, dtype=float)
+        else:
+            if VERBOSE:
+                print(f"Skipping invalid landmark '{landmark_name}': {landmark_coords}")
+    
+    if not valid_landmarks:
+        raise ValueError("No valid landmarks found! All landmarks must have exactly 3 coordinates.")
+    
+    # Create arrays only from valid landmarks
+    landmarks_order = sorted(list(valid_landmarks.keys()))
+    input_landmarks_array = np.array([valid_landmarks[k] for k in landmarks_order])
+    
+    if input_landmarks_array.size == 0 or input_landmarks_array.shape[1] != 3:
+        raise ValueError(f"Invalid landmarks shape: {input_landmarks_array.shape}. Expected (N, 3).")
+    
+    input_landmarks = torch.from_numpy(input_landmarks_array)
     input_landmarks = input_landmarks.type(DEFAULT_DTYPE).to(DEVICE)
 
     # setup body model
