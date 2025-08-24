@@ -9,7 +9,7 @@ import argparse
 
 # from losses import ChamferDistance, MaxMixturePrior, summed_L2, LossTracker
 from visualization import viz_error_curves, viz_iteration, set_init_plot, viz_final_fit
-from utils import (check_scan_prequisites_fit_bm, cleanup, get_normals, 
+from utils import (check_scan_prequisites_fit_bm, cleanup, get_normals, get_device,
                    load_config, save_configs,
                    load_landmarks,load_scan,
                    get_already_fitted_scan_names, get_skipped_scan_names, 
@@ -49,6 +49,9 @@ def fit_body_model(input_dict: dict, cfg: dict):
     SAVE_PATH = cfg['save_path']
     SOCKET_TYPE = cfg["socket_type"]
     
+    # Get device from config
+    device = get_device(cfg)
+    
     if VISUALIZE:
         socket = cfg["socket"]
 
@@ -74,7 +77,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
         os.makedirs(SAVE_PATH)
 
     # process inputs
-    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(device)
     input_faces = torch.from_numpy(input_faces).type(DEFAULT_DTYPE) if \
                             (not isinstance(input_faces,type(None))) else None
 
@@ -82,14 +85,14 @@ def fit_body_model(input_dict: dict, cfg: dict):
         landmarks_order = sorted(list(input_landmarks.keys()))
         input_landmarks = np.array([input_landmarks[k] for k in landmarks_order])
         input_landmarks = torch.from_numpy(input_landmarks)
-        input_landmarks = input_landmarks.type(DEFAULT_DTYPE).cuda()
+        input_landmarks = input_landmarks.type(DEFAULT_DTYPE).to(device)
     else:
         input_landmarks = []
         landmarks_order = []
 
     if USE_NORMALS:
         input_normals = get_normals(input_vertices[0].detach().cpu())
-        input_normals = input_normals.cuda() # (N,3)
+        input_normals = input_normals.to(device) # (N,3)
     else:
         input_normals = None
         template_normals = None
@@ -98,9 +101,9 @@ def fit_body_model(input_dict: dict, cfg: dict):
     cfg["body_model_gender"] = input_gender
     cfg["body_model_num_betas"] = input_shape_dim
     body_model = BodyModel(cfg)
-    body_model.cuda()
+    body_model.to(device)
     cfg["init_params"] = {"pose":input_pose, "shape":input_shape, "trans":input_trans}
-    body_model_params = BodyParameters(cfg).cuda()
+    body_model_params = BodyParameters(cfg).to(device)
     body_model_landmark_inds = body_model.landmark_indices(landmarks_order)
     print(f"Using {len(input_landmarks)}/{len(body_model.all_landmark_indices)} landmarks.")
 
@@ -116,16 +119,16 @@ def fit_body_model(input_dict: dict, cfg: dict):
     body_optimizer = torch.optim.Adam(body_model_params.parameters(), lr=LR)
     # chamfer_distance = ChamferDistance()
     # prior = MaxMixturePrior(prior_folder=cfg["prior_path"], num_gaussians=8)
-    # prior = prior.cuda()
+    # prior = prior.to(device)
     loss_func = losses.Losses(cfg, cfg["loss_weights"])
 
 
 
     if VISUALIZE:
-        starting_verts = body_model.deform_verts(input_pose.cuda(),
-                                                input_shape.cuda(),
-                                                input_trans.cuda(),
-                                                torch.ones(1).cuda()*1).detach().cpu()
+        starting_verts = body_model.deform_verts(input_pose.to(device),
+                                                input_shape.to(device),
+                                                input_trans.to(device),
+                                                torch.ones(1, device=device)*1).detach().cpu()
         fig = set_init_plot(input_vertices[0].detach().cpu(), 
                             starting_verts,  
                             title=f"Fitting ({input_name}) - initial setup",
@@ -158,7 +161,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
 
         if USE_NORMALS:
             template_normals = get_normals(body_model_verts.detach().cpu())
-            template_normals = template_normals.cuda() # (6890,3)
+            template_normals = template_normals.to(device) # (6890,3)
 
         # compute loss
         loss_dict = dict(scan_vertices=input_vertices,

@@ -68,6 +68,7 @@ General variables:
 - `default_dtype` -  (torch.dtype) define the shape, pose, etc. tensor data types
 - `pause_script_after_fitting` - (bool) pause the script after the fitting is done so you can visualize in peace
 - `experiment_name` - (string) name your experiment
+- `device` - (string) computation device to use: `cuda` or `cpu`. Automatically falls back to `cpu` if CUDA is not available
 
 Visualization variables:
 - `socket_type` - (string) type of socket, only zmq supported
