@@ -3,3 +3,4 @@ pyTorchChamferDistance/chamfer_distance/__pycache__/*
 __pycache__/*
 .Rhistory
 .DS_Store
+environment.yml
