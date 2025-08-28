@@ -94,6 +94,52 @@ def save_configs(cfg: dict):
         _ = json.dump(cfg, file, default=lambda o: str(o))
 
 #############################################################
+#                   Device utilities                        #
+#############################################################
+
+def get_device(device_str: str = "auto") -> torch.device:
+    """
+    Get PyTorch device based on string specification.
+    
+    :param device_str: Device specification string
+                      Options: "cuda", "cpu", "auto", "cuda:0", "cuda:1", etc.
+    :return: PyTorch device object
+    """
+    if device_str == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    elif device_str == "cuda":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        else:
+            print("CUDA not available, falling back to CPU")
+            return torch.device("cpu")
+    elif device_str.startswith("cuda:"):
+        if torch.cuda.is_available():
+            gpu_id = int(device_str.split(":")[1])
+            if gpu_id < torch.cuda.device_count():
+                return torch.device(device_str)
+            else:
+                print(f"GPU {gpu_id} not available, falling back to cuda:0")
+                return torch.device("cuda:0")
+        else:
+            print("CUDA not available, falling back to CPU")
+            return torch.device("cpu")
+    else:
+        return torch.device(device_str)
+
+def process_device_config(cfg: dict) -> dict:
+    """
+    Process device configuration and add device object to config.
+    
+    :param cfg: Configuration dictionary
+    :return: Updated configuration dictionary with device
+    """
+    device_str = cfg.get("device", "auto")
+    cfg["device"] = get_device(device_str)
+    cfg["device_str"] = device_str
+    return cfg
+
+#############################################################
 #                   Process configs                         #
 #############################################################
 
@@ -864,7 +910,7 @@ def rotate_points_homo(points, A):
 #                   Optimization                            #
 #############################################################
 
-def initialize_A(N, random_init=True):
+def initialize_A(N, random_init=True, device=None):
         '''
         Creates (N,3,4) homogeneous transformation matrix
         Either random or eye matrix for rotation and 0 for translation.
@@ -872,9 +918,12 @@ def initialize_A(N, random_init=True):
 
         :param N: number of matrices to create
         :param random_init: boolean indicating if random initialization
+        :param device: torch device to create tensor on (default: cuda:0 if available, else cpu)
 
         :return A: (N,3,4)torch tensor of homogeneous transformation matrices
         '''
+        if device is None:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         A = torch.cat([torch.diag(torch.ones(3)),
                         torch.zeros(3,1)],dim=1).unsqueeze(0).expand(N,3,4)
@@ -892,7 +941,7 @@ def initialize_A(N, random_init=True):
         # else:
         #     A = torch.cat([torch.diag(torch.ones(3)),
         #                     torch.zeros(3,1)],dim=1).unsqueeze(0).expand(N,3,4)
-        return torch.tensor(A, requires_grad=True, device="cuda:0") #.requires_grad_(True)
+        return torch.tensor(A, requires_grad=True, device=device) #.requires_grad_(True)
         #return A.requires_grad_(True).cuda()
         # return A.clone().requires_grad_(True).cuda()
 

@@ -73,6 +73,10 @@ class SMPLBodyModel():
 
     def cuda(self):
         self.body_model.cuda()
+    
+    def to(self, device):
+        """Move model to device"""
+        self.body_model.to(device)
 
     def __call__(self, pose, betas, **kwargs):
 
@@ -176,6 +180,10 @@ class SMPLXBodyModel():
 
     def cuda(self):
         self.body_model.cuda()
+    
+    def to(self, device):
+        """Move model to device"""
+        self.body_model.to(device)
 
     def __call__(self, pose, betas, **kwargs):
 

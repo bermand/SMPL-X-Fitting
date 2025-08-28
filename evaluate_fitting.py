@@ -8,7 +8,7 @@ from glob import glob
 import torch
 from body_models import BodyModel, infer_body_model
 
-from utils import load_config, load_scan, process_body_model_path
+from utils import load_config, load_scan, process_body_model_path, get_device
 from datasets import FAUST, CAESAR, FourDHumanOutfit
 from visualization import visualize_pve
 
@@ -157,16 +157,7 @@ def evaluate_chamfer(fitting_results_path, scan_path, device, **kwargs):
     # check if evaluating single scan or dataset
     cfg = load_config(f"{fitting_results_path}/config.yaml")
     chamfer_distance = ChamferDistance()
-    if ("cuda" in device):
-        nr_gpus = torch.cuda.device_count()
-        selected_device = int(device.split(":")[1])
-        if selected_device <= nr_gpus:
-            device = torch.device(device)
-        else:
-            raise ValueError(f"There are {nr_gpus} gpus." + 
-                             f"Cant select {selected_device}.")
-    else:
-        device = torch.device("cpu")
+    device = get_device(device)
     # device = torch.device(device_str if torch.cuda.is_available() else 'cpu')
 
     # cases for evaluating dataset or scan
