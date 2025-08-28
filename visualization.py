@@ -299,25 +299,42 @@ def create_wireframe_plot(verts: np.ndarray,faces: np.ndarray):
                         )
         return wireframe
 
-def visualize_smpl_landmarks(**kwargs):
+def visualize_landmarks(model_type="smpl", **kwargs):
+    """
+    Generic function to visualize body model landmarks for both SMPL and SMPL-X models.
+    
+    :param model_type: str, either "smpl" or "smplx" 
+    :param kwargs: additional keyword arguments including select_landmarks_to_viz
+    """
     cfg = load_config()
 
     # get body model
     body_models_path = cfg["paths"]["body_models_path"]
-    smpl_body_model_path = os.path.join(body_models_path,
-                                        "smpl/SMPL_NEUTRAL.pkl")
-    body_model = smplx.create(smpl_body_model_path, 
-                            model_type="SMPL",
+    
+    # Set model-specific parameters
+    if model_type.lower() == "smpl":
+        body_model_path = os.path.join(body_models_path, "smpl/SMPL_NEUTRAL.pkl")
+        lm_source = landmarks.SMPL_INDEX_LANDMARKS
+        model_name = "SMPL"
+    elif model_type.lower() == "smplx":
+        body_model_path = os.path.join(body_models_path, "smplx/SMPLX_NEUTRAL.pkl")
+        lm_source = landmarks.SMPLX_INDEX_LANDMARKS
+        model_name = "SMPL-X"
+    else:
+        raise ValueError(f"Unsupported model_type: {model_type}. Use 'smpl' or 'smplx'.")
+    
+    body_model = smplx.create(body_model_path, 
+                            model_type=model_type.upper(),
                             gender="NEUTRAL", 
                             use_face_contour=False,
                             ext='pkl')
     
     body_model_vertices = body_model.v_template
-    body_mdoel_faces = body_model.faces
+    body_model_faces = body_model.faces
     
     # get landmarks
-    lm = landmarks.SMPL_INDEX_LANDMARKS
-    if not isinstance(kwargs["select_landmarks_to_viz"],type(None)):
+    lm = lm_source
+    if not isinstance(kwargs.get("select_landmarks_to_viz"), type(None)):
         lm = {k:v for k,v in lm.items() 
               if k in kwargs["select_landmarks_to_viz"]}
 
@@ -331,10 +348,10 @@ def visualize_smpl_landmarks(**kwargs):
                         z=body_model_vertices[:,2],
                         #facecolor=face_colors,
                         color = "lightpink",
-                        i=body_mdoel_faces[:,0],
-                        j=body_mdoel_faces[:,1],
-                        k=body_mdoel_faces[:,2],
-                        name='smpl body model',
+                        i=body_model_faces[:,0],
+                        j=body_model_faces[:,1],
+                        k=body_model_faces[:,2],
+                        name=f'{model_name.lower()} body model',
                         hovertemplate ='<i>vert ind:</i>: %{text}',
                         text = list(range(body_model_vertices.shape[0])),
                         showscale=True,
@@ -362,10 +379,20 @@ def visualize_smpl_landmarks(**kwargs):
 
     fig.update_layout(scene_aspectmode='data',
                         width=1000, height=700,
-                        title="SMPL + landmarks",
+                        title=f"{model_name} + landmarks",
                         )
     
     fig.show()
+
+
+def visualize_smpl_landmarks(**kwargs):
+    """Legacy function for SMPL landmark visualization. Calls generic function."""
+    return visualize_landmarks(model_type="smpl", **kwargs)
+
+
+def visualize_smplx_landmarks(**kwargs):
+    """Function for SMPL-X landmark visualization. Calls generic function."""
+    return visualize_landmarks(model_type="smplx", **kwargs)
 
 def visualize_scan_landmarks(scan_path,landmark_path, **kwargs):
 
@@ -592,11 +619,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="subparsers")
 
+    parser_viz_landmarks = subparsers.add_parser('visualize_landmarks')
+    parser_viz_landmarks.add_argument('--model_type', type=str, choices=['smpl', 'smplx'], 
+                                     default='smpl', help='Body model type: smpl or smplx')
+    parser_viz_landmarks.add_argument('--select_landmarks_to_viz', nargs='+', required=False,
+                                     help='Select subset of landmarks.', 
+                                     default=None)
+    parser_viz_landmarks.set_defaults(func=visualize_landmarks)
+
     parser_viz_smpl_landmarks = subparsers.add_parser('visualize_smpl_landmarks')
     parser_viz_smpl_landmarks.add_argument('--select_landmarks_to_viz', nargs='+', required=False,
                                     help='Select subset of landmarks.', 
                                     default=None)
     parser_viz_smpl_landmarks.set_defaults(func=visualize_smpl_landmarks)
+
+    parser_viz_smplx_landmarks = subparsers.add_parser('visualize_smplx_landmarks')
+    parser_viz_smplx_landmarks.add_argument('--select_landmarks_to_viz', nargs='+', required=False,
+                                     help='Select subset of landmarks.', 
+                                     default=None)
+    parser_viz_smplx_landmarks.set_defaults(func=visualize_smplx_landmarks)
 
     parser_viz_scan_landmarks = subparsers.add_parser('visualize_scan_landmarks')
     parser_viz_scan_landmarks.add_argument("-S", "--scan_path", type=str, required=True)
