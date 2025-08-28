@@ -1,5 +1,3 @@
-
-
 from termcolor import colored
 import yaml
 from datetime import datetime
@@ -94,7 +92,7 @@ def save_configs(cfg: dict):
     config_name = os.path.join(save_path,"config.yaml")
     with open(config_name, 'w') as file:
         _ = json.dump(cfg, file, default=lambda o: str(o))
-        
+
 #############################################################
 #                   Process configs                         #
 #############################################################
@@ -102,13 +100,13 @@ def save_configs(cfg: dict):
 
 def process_visualize_steps(cfg: dict):
     """
-    The optimization iteration steps to visualize from visualize_steps 
+    The optimization iteration steps to visualize from visualize_steps
     are processed into a list of iteration indices to visualize.
 
-    :param cfg: config dictionary with "visualize_steps" key which is a 
-                string of sum of ranges and lists of iteration indices 
+    :param cfg: config dictionary with "visualize_steps" key which is a
+                string of sum of ranges and lists of iteration indices
                 to visualize
-                example: range(0,300,20) + range(300,500,30) + [499] 
+                example: range(0,300,20) + range(300,500,30) + [499]
                 visualizes
                 iterations 0,20,40,...,300,330,360,...,500, and 499
     """
@@ -123,7 +121,10 @@ def process_visualize_steps(cfg: dict):
     return cfg
 
 def process_default_dtype(cfg: dict):
-    cfg["default_dtype"] = eval(cfg["default_dtype"])
+    if isinstance(cfg["default_dtype"], str):
+        cfg["default_dtype"] = eval(cfg["default_dtype"])
+    else:
+        cfg["default_dtype"] = cfg["default_dtype"]
     return cfg
 
 def process_body_model_path(cfg: dict):
@@ -138,14 +139,14 @@ def process_body_model_fit_verts(cfg):
 
     if not isinstance(cfg["start_from_body_model"],type(None)):
         cfg["body_model"] = cfg["start_from_body_model"]
-    
+
     elif not isinstance(cfg["start_from_previous_results"],type(None)):
 
         npz_files = glob(os.path.join(cfg["start_from_previous_results"],"*.npz"))
         data = np.load(npz_files[0])
         cfg["body_model"] = data["body_model"].item()
-    
-    else: 
+
+    else:
         cfg["body_model"] = "smpl"
 
     return cfg
@@ -155,15 +156,15 @@ def process_landmarks(cfg: dict):
 
     This function processes the cfg["use_landmarks"] which states
     which landamrks to use during optimization. The function returns
-    a standardized list of landmark names to use defined on the body 
-    model. To find all the defined landmarks on the body model, 
+    a standardized list of landmark names to use defined on the body
+    model. To find all the defined landmarks on the body model,
     check landmarks.py.
-    
+
 
     The "use_landmarks" can be defined as
-    - a string "all" indicating to use all the possible landmarks, 
-    - "none" / None / [] indicating to use no landmarks, 
-    - string of the dictionary name from landmarks.py which has 
+    - a string "all" indicating to use all the possible landmarks,
+    - "none" / None / [] indicating to use no landmarks,
+    - string of the dictionary name from landmarks.py which has
         landmark:indices mappings for a body model,
     - a list of landmark names to use ["Lt. 10th Rib", "Lt. Dactylion",..]
 
@@ -179,8 +180,8 @@ def process_landmarks(cfg: dict):
     possible_lm = list(possible_landmarks.keys())
 
     # use no landmarks
-    if (isinstance(use_lm,type(None)) or 
-            (isinstance(use_lm,str) and use_lm.lower() == "none") or 
+    if (isinstance(use_lm,type(None)) or
+            (isinstance(use_lm,str) and use_lm.lower() == "none") or
             use_lm == []):
         use_lm = []
 
@@ -192,9 +193,9 @@ def process_landmarks(cfg: dict):
         if isinstance(use_lm,type(None)):
             raise ValueError(f"Mapping {use_lm} does not exist. \
                                Check landmarks.py.")
-        
+
         use_lm = list(use_lm.keys())
-            
+
 
     # use a specific list of landamrks
     # NOTE: includes the case when use_lm was a string of a landmarks dict name
@@ -242,7 +243,7 @@ def create_results_directory(save_path: str = "/SMPL-Fitting/results",
     Save results in save_path/YYYY_MM_DD_HH_MM_SS folder.
     If continue_run is folder of type YYYY_MM_DD_HH_MM_SS, then
     save results in save_path/continue_run folder.
-    
+
     :param save_path: path to save results to
     :param continue_run: string of type YYYY_MM_DD_HH_MM_SS
     """
@@ -263,7 +264,7 @@ def create_results_directory(save_path: str = "/SMPL-Fitting/results",
         save_path = os.path.join(save_path,current_time)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-    
+
     print(f"Saving results to {save_path}")
 
     if not isinstance(sequences,type(None)):
@@ -297,7 +298,7 @@ def print_losses(data_loss:torch.tensor,
                  prior_loss:torch.tensor,
                  beta_loss:torch.tensor,
                  loss_names:str = "losses"):
-    
+
     print_str = colored(f"\t{loss_names}:", "yellow")
     print_str += colored(f" DATA:","blue")
     print_str += colored(f"{data_loss.item():.6f}","green")
@@ -332,18 +333,18 @@ def print_loss_weights(data_loss:torch.tensor,
 
 def get_already_fitted_scan_names(cfg: dict):
     """
-    Return list of already fitted scans - founds as .npz files 
+    Return list of already fitted scans - founds as .npz files
     in the save_path directory
 
     :param cfg: config dictionary with
                 save_path: path where results are saved
-    
+
     :return list of scan names that have already been fitted
     """
 
     fitted_scans_path = os.path.join(cfg["save_path"],"*.npz")
     fitted_scans = glob(fitted_scans_path)
-    fitted_scans = [name.split("/")[-1].split(".")[0] 
+    fitted_scans = [name.split("/")[-1].split(".")[0]
                     for name in fitted_scans]
 
     return fitted_scans
@@ -351,9 +352,9 @@ def get_already_fitted_scan_names(cfg: dict):
 def check_scan_prequisites_fit_bm(input_dict:dict, verbose=True):
     """
     Check if the input_dict has all the required fields with defined
-    values. Required data for fitting is the scans: 
-    - name, 
-    - vertices, 
+    values. Required data for fitting is the scans:
+    - name,
+    - vertices,
     - landmarks
 
     If all the data is there, return True, else False
@@ -361,7 +362,7 @@ def check_scan_prequisites_fit_bm(input_dict:dict, verbose=True):
     :param input_dict: dictionary with keys name, vertices, landmarks
     :param verbose: print message if example will not be processed
 
-    :return (boolean) indicating if input_dict has all data and 
+    :return (boolean) indicating if input_dict has all data and
             the fitting can proceed
     """
 
@@ -376,14 +377,14 @@ def check_scan_prequisites_fit_bm(input_dict:dict, verbose=True):
             print(colored(msg,"red"))
         return False
 
-    
+
     # check if any value from input_dict is None
     # that means that some of the data is missing
     if any(input_dict[key] is None for key in expected_keys):
         if verbose:
             print(colored(msg,"red"))
         return False
-    
+
     return True
 
 def check_scan_prequisites_fit_verts(input_dict:dict, cfg:dict, verbose=True):
@@ -392,10 +393,10 @@ def check_scan_prequisites_fit_verts(input_dict:dict, cfg:dict, verbose=True):
     If all the data is there, return True, else False
     Required data is: name, vertices
 
-    :param input_example: dictionary with keys 
+    :param input_example: dictionary with keys
     :param verbose: print messages if example will not be processed
 
-    :return boolean indicating if example has all data and 
+    :return boolean indicating if example has all data and
             can be processed
     """
 
@@ -412,18 +413,18 @@ def check_scan_prequisites_fit_verts(input_dict:dict, cfg:dict, verbose=True):
             print(colored(msg,"red"))
         return False
 
-    
+
     # check if input_dict has all the data required to fit the body model
     if any(input_dict[key] is None for key in expected_keys):
         if verbose:
             print(colored(msg,"red"))
         return False
-    
+
     return True
 
 def get_skipped_scan_names(cfg: dict):
     """
-    Get list of scan names that have been 
+    Get list of scan names that have been
     skipped because of missing data.
 
     :param cfg: config dictionary with
@@ -431,7 +432,7 @@ def get_skipped_scan_names(cfg: dict):
 
     :return list of scan names that have been skipped
     """
-    
+
     skipped_scans_path = os.path.join(cfg["save_path"],
                                       "skipped_scans.txt")
     if os.path.exists(skipped_scans_path):
@@ -440,7 +441,7 @@ def get_skipped_scan_names(cfg: dict):
         skipped_scans = skipped_scans.split("\n")
     else:
         skipped_scans = []
-    
+
     return skipped_scans
 
 
@@ -470,7 +471,7 @@ def setup_socket(socket_type="zmq"):
         socket.connect(f"tcp://127.0.0.1:5555")
         return socket
     # elif socket_type == "flask":
-    #     # socket = SocketIO(message_queue='redis://')  # Use Redis message queue 
+    #     # socket = SocketIO(message_queue='redis://')  # Use Redis message queue
     #     socket = SocketIO()
     #     return socket
     else:
@@ -543,8 +544,8 @@ def parse_landmark_txt_coords_formatting(data: List[str]):
 
     :param data (List[str]) list of strings, each string
                 represents one line from the txt file
-    
-    :return landmarks (dict) with formatting 
+
+    :return landmarks (dict) with formatting
                       {landmark_name: [x,y,z]}
     """
 
@@ -578,8 +579,8 @@ def parse_landmark_txt_index_formatting(data):
 
     :param data (List[str]) list of strings, each string
                 represents one line from the txt file
-    
-    :return landmarks (dict) with formatting 
+
+    :return landmarks (dict) with formatting
                       {landmark_name: index}
     """
 
@@ -604,8 +605,8 @@ def parse_landmark_txt_index_formatting(data):
 
     return landmark_indices
 
-def load_landmarks(landmark_path: str, 
-                   landmark_subset: List[str] = None, 
+def load_landmarks(landmark_path: str,
+                   landmark_subset: List[str] = None,
                    scan_vertices: np.ndarray = None):
     """
     Load landmarks from file and return the landmarks as
@@ -620,19 +621,19 @@ def load_landmarks(landmark_path: str,
         Option2) {landmark_name: landmark_index}
     - .lnd extension
         specific to the CAESAR dataset -> check landmarks.py
-    where the landmark_index is the index of the landmark in 
+    where the landmark_index is the index of the landmark in
     scan_vertices
 
-    
+
     :param landmark_path: (str) of path to landmark file
     :param landmark_subset: (list) list of strings of landmark
                             names to use
     :param scan_vertices: (np.ndarray) dim (N,3) of the vertices
                           if landmarks defined as indices of the
-                          vertices, returning landmarks as 
+                          vertices, returning landmarks as
                           scan_vertices[landmark_indices,:]
 
-                          
+
     Return: landmarks: (dict) of landmark_name: landmark_coords
                        where landmark_coords is list of 3 floats
     """
@@ -686,7 +687,7 @@ def load_landmarks(landmark_path: str,
                 msg = "Scan vertices need to be provided for"
                 msg += "index type of landmark file formatting"
                 raise NameError(msg)
-            
+
             landmarks = {}
             for lm_name, lm_ind in data.items():
                 landmarks[lm_name] = scan_vertices[lm_ind,:]
@@ -714,7 +715,7 @@ def load_landmarks(landmark_path: str,
 
 def load_scan(scan_path, return_vertex_colors=False):
     """
-    Load scan given its scan_path using open3d. 
+    Load scan given its scan_path using open3d.
     Scan can be defined as:
     - .ply file
     - .ply.gz file
@@ -804,58 +805,58 @@ def update_normals(normals, A_mat):
             A: pytorch Tensor of N x 3 x 4 transformations (missing last row)
     Return: rot_normals: pytorch Tensor N x 3 of rotated normals A * normals
     '''
-    
+
     N = normals.shape[0]
     device = normals.device
-    
+
     # turn normals homo N x 4
     normals_homo = torch.cat([normals.float(),
                             torch.ones(N,device=device).unsqueeze(1).float()],1)
-    
+
     # A is 3 x 4, want homogeneous transf, add last row [0,0,0,1]
     # A dim N x 4 x 4
     A_mat = torch.cat([A_mat,
                 torch.tensor([0,0,0,1], device=device).unsqueeze(0).expand(N,1,4)],
                 dim=1)
-    
+
     # transform normals N x 4 x 4 * N x 4 x 1   =   N x 4 x 1
     transformed_normals = torch.matmul(A_mat, normals_homo.unsqueeze(2))
     # N x 4
     transformed_normals = transformed_normals.squeeze()
     # N x 3
-    transformed_normals = torch.div(transformed_normals, 
-                                transformed_normals[:,3].unsqueeze(1))[:,:3]    
+    transformed_normals = torch.div(transformed_normals,
+                                transformed_normals[:,3].unsqueeze(1))[:,:3]
     return  transformed_normals
 
 def rotate_points_homo(points, A):
     '''
     input:  points: torch tensor N x 3
-            A: torch tensor N x 3 x 4 
+            A: torch tensor N x 3 x 4
                (homogenous transf matrix without [0,0,0,1] last row)
     return: transformed_points: torch tensor N x 3
     '''
     N = points.shape[0]
     device = points.device
-    
+
     # turn points homo N x 4
     points_homo = torch.cat([points.float(),
                              torch.ones(N, device=device).unsqueeze(1).float()],1)
-    
+
     # A is 3 x 4, want homogeneous transf, add last row [0,0,0,1]
     # A dim N x 4 x 4
     A = torch.cat([A,
                    torch.tensor([0,0,0,1], device=device).unsqueeze(0).expand(N,1,4)],
                   dim=1)
-    
+
     # transform points N x 4 x 4 * N x 4 x 1   =   N x 4 x 1
     transformed_points = torch.matmul(A, points_homo.unsqueeze(2))
     # N x 4
     transformed_points = transformed_points.squeeze()
-    
+
     # remove homogeneous coord N x 3
-    transformed_points = torch.div(transformed_points, 
-                                   transformed_points[:,3].unsqueeze(1))[:,:3]    
-    return  transformed_points# N x 3 
+    transformed_points = torch.div(transformed_points,
+                                   transformed_points[:,3].unsqueeze(1))[:,:3]
+    return  transformed_points# N x 3
 
 
 
@@ -875,9 +876,9 @@ def initialize_A(N, random_init=True):
         :return A: (N,3,4)torch tensor of homogeneous transformation matrices
         '''
 
-        A = torch.cat([torch.diag(torch.ones(3)), 
+        A = torch.cat([torch.diag(torch.ones(3)),
                         torch.zeros(3,1)],dim=1).unsqueeze(0).expand(N,3,4)
-        
+
         if random_init:
             # just random initialization
             # A_tnp = torch.rand(self.nr_A,3,4)
@@ -889,7 +890,7 @@ def initialize_A(N, random_init=True):
             A = A + torch.FloatTensor(N,3,4).uniform_(r1, r2)
 
         # else:
-        #     A = torch.cat([torch.diag(torch.ones(3)), 
+        #     A = torch.cat([torch.diag(torch.ones(3)),
         #                     torch.zeros(3,1)],dim=1).unsqueeze(0).expand(N,3,4)
         return torch.tensor(A, requires_grad=True, device="cuda:0") #.requires_grad_(True)
         #return A.requires_grad_(True).cuda()
@@ -898,6 +899,6 @@ def initialize_A(N, random_init=True):
 
 def exit_fitting_vertices(current_loss, previous_loss, loss_difference, minimal_loss):
     condition = (current_loss.item() <= minimal_loss) or \
-                (torch.abs(current_loss-previous_loss)<=loss_difference)    
-    
+                (torch.abs(current_loss-previous_loss)<=loss_difference)
+
     return condition

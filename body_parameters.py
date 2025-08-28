@@ -2,7 +2,7 @@
 
 import torch
 
-    
+
 class OptimizationSMPL(torch.nn.Module):
     """
     Class used to optimize SMPL parameters.
@@ -32,7 +32,7 @@ class OptimizationSMPL(torch.nn.Module):
 
             if "scale" in init_params:
                 scale = cfg["init_params"]["scale"].cuda()
-        
+
 
         if "refine_params" in cfg:
             params_to_refine = cfg["refine_params"]
@@ -60,23 +60,21 @@ class OptimizationSMPL(torch.nn.Module):
 
     def forward(self):
         return self.pose, self.beta, self.trans, self.scale
-    
+
 
 
 class BodyParameters():
 
     def __new__(cls, cfg):
 
-        possible_model_types = ["smpl"] #["smpl", "smplx"]
+        possible_model_types = ["smpl", "smplx"] #["smpl", "smplx"]
         model_type = cfg["body_model"].lower()
 
         if model_type == "smpl":
             return OptimizationSMPL(cfg)
-        # elif model_type == "smplx":
-        #     return OptimizationSMPLX()
+        elif model_type == "smplx":
+             return OptimizationSMPLX()
         else:
             msg = f"Model type {model_type} not defined. \
                     Possible model types are: {possible_model_types}"
             raise NotImplementedError(msg)
-        
-
