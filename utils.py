@@ -21,6 +21,25 @@ import tempfile
 import trimesh
 
 #############################################################
+#                   Device utilities                        #
+#############################################################
+
+def get_device(cfg: dict):
+    """
+    Get the device (cuda or cpu) from configuration.
+    Automatically falls back to cpu if cuda is not available.
+    
+    :param cfg: config dictionary
+    :return: torch device
+    """
+    device_str = cfg.get("device", "cuda").lower()
+    
+    if device_str == "cuda" and torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+
+#############################################################
 #                   Configs                                 #
 #############################################################
 
@@ -863,7 +882,7 @@ def rotate_points_homo(points, A):
 #                   Optimization                            #
 #############################################################
 
-def initialize_A(N, random_init=True):
+def initialize_A(N, random_init=True, device=torch.device("cpu")):
         '''
         Creates (N,3,4) homogeneous transformation matrix
         Either random or eye matrix for rotation and 0 for translation.
@@ -871,6 +890,7 @@ def initialize_A(N, random_init=True):
 
         :param N: number of matrices to create
         :param random_init: boolean indicating if random initialization
+        :param device: torch device to put the tensor on
 
         :return A: (N,3,4)torch tensor of homogeneous transformation matrices
         '''
@@ -891,7 +911,7 @@ def initialize_A(N, random_init=True):
         # else:
         #     A = torch.cat([torch.diag(torch.ones(3)), 
         #                     torch.zeros(3,1)],dim=1).unsqueeze(0).expand(N,3,4)
-        return torch.tensor(A, requires_grad=True, device="cuda:0") #.requires_grad_(True)
+        return torch.tensor(A, requires_grad=True, device=device) #.requires_grad_(True)
         #return A.requires_grad_(True).cuda()
         # return A.clone().requires_grad_(True).cuda()
 

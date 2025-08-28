@@ -11,7 +11,7 @@ from losses import ChamferDistance, MaxMixturePrior, summed_L2, LossTracker
 from visualization import viz_error_curves, viz_iteration, set_init_plot, viz_final_fit
 from utils import (check_scan_prequisites_fit_bm, cleanup, 
                    load_config, save_configs,
-                   load_landmarks,load_scan,
+                   load_landmarks,load_scan, get_device,
                    get_already_fitted_scan_names, get_skipped_scan_names, 
                    initialize_fit_bm_loss_weights, load_loss_weights_config, 
                    print_loss_weights, print_losses, print_params, 
@@ -49,6 +49,9 @@ def fit_body_model(input_dict: dict, cfg: dict):
     SAVE_PATH = cfg['save_path']
     SOCKET_TYPE = cfg["socket_type"]
     
+    # Get device from config
+    device = get_device(cfg)
+    
     if VISUALIZE:
         socket = cfg["socket"]
 
@@ -60,19 +63,19 @@ def fit_body_model(input_dict: dict, cfg: dict):
     input_index = input_dict["scan_index"]
 
     # process inputs
-    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+    input_vertices = torch.from_numpy(input_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(device)
     input_faces = torch.from_numpy(input_faces).type(DEFAULT_DTYPE) if \
                             (not isinstance(input_faces,type(None))) else None
 
     landmarks_order = sorted(list(input_landmarks.keys()))
     input_landmarks = np.array([input_landmarks[k] for k in landmarks_order])
     input_landmarks = torch.from_numpy(input_landmarks)
-    input_landmarks = input_landmarks.type(DEFAULT_DTYPE).cuda()
+    input_landmarks = input_landmarks.type(DEFAULT_DTYPE).to(device)
 
     # setup body model
     body_model = BodyModel(cfg)
-    body_model.cuda()
-    body_model_params = BodyParameters(cfg).cuda()
+    body_model.to(device)
+    body_model_params = BodyParameters(cfg).to(device)
     body_model_landmark_inds = body_model.landmark_indices(landmarks_order)
     print(f"Using {len(input_landmarks)}/{len(body_model.all_landmark_indices)} landmarks.")
 
@@ -87,7 +90,7 @@ def fit_body_model(input_dict: dict, cfg: dict):
     body_optimizer = torch.optim.Adam(body_model_params.parameters(), lr=LR)
     chamfer_distance = ChamferDistance()
     prior = MaxMixturePrior(prior_folder=cfg["prior_path"], num_gaussians=8)
-    prior = prior.cuda()
+    prior = prior.to(device)
 
 
 

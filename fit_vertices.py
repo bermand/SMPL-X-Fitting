@@ -10,7 +10,7 @@ from body_models import BodyModel
 from dash_app import run_dash_app_as_subprocess
 from utils import (check_scan_prequisites_fit_verts, cleanup, 
                    create_results_directory, exit_fitting_vertices, 
-                   get_already_fitted_scan_names, 
+                   get_already_fitted_scan_names, get_device,
                    get_normals, get_skipped_scan_names, initialize_A, 
                    initialize_fit_verts_loss_weights, load_config, load_landmarks,
                    load_loss_weights_config, load_scan, process_body_model_fit_verts, 
@@ -46,6 +46,9 @@ def fit_vertices(input_dict: dict, cfg: dict):
     SAVE_PATH = cfg['save_path']
     SOCKET_TYPE = cfg["socket_type"]
     
+    # Get device from config
+    device = get_device(cfg)
+    
     if VISUALIZE:
         socket = cfg["socket"]
 
@@ -56,14 +59,14 @@ def fit_vertices(input_dict: dict, cfg: dict):
     USE_LANDMARKS = False if isinstance(scan_landmarks,type(None)) else True
     scan_index = input_dict.get("scan_index", 0)
     
-    scan_vertices = torch.from_numpy(scan_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+    scan_vertices = torch.from_numpy(scan_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(device)
     if USE_LANDMARKS:
         landmarks_order = sorted(list(scan_landmarks.keys()))
         scan_landmarks = np.array([scan_landmarks[k] for k in landmarks_order])
         scan_landmarks = torch.from_numpy(scan_landmarks)
-        scan_landmarks = scan_landmarks.type(DEFAULT_DTYPE).cuda()
+        scan_landmarks = scan_landmarks.type(DEFAULT_DTYPE).to(device)
     scan_normals = get_normals(scan_vertices[0].detach().cpu())
-    scan_normals = scan_normals.cuda()
+    scan_normals = scan_normals.to(device)
 
 
     # set template data
@@ -77,7 +80,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
         template_dict = np.load(fit_path)
         
         template_vertices = template_dict["vertices"]
-        template_vertices = torch.from_numpy(template_vertices).type(DEFAULT_DTYPE).unsqueeze(0).cuda()
+        template_vertices = torch.from_numpy(template_vertices).type(DEFAULT_DTYPE).unsqueeze(0).to(device)
         
         body_model = BodyModel(cfg)
     else:
@@ -85,7 +88,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
             cfg["start_from_body_model"] = "smpl"
         body_model = BodyModel(cfg)
         
-        template_vertices = body_model.verts_t_pose.unsqueeze(0).cuda() # (1,N,3)
+        template_vertices = body_model.verts_t_pose.unsqueeze(0).to(device) # (1,N,3)
 
     if USE_LANDMARKS:
         template_landmark_inds = body_model.landmark_indices(landmarks_order)
@@ -93,7 +96,7 @@ def fit_vertices(input_dict: dict, cfg: dict):
     
 
     template_normals = get_normals(template_vertices[0].detach().cpu())
-    template_normals = template_normals.cuda()
+    template_normals = template_normals.to(device)
     template_vertices_N = template_vertices.shape[1]
 
     # visualize starting fitting point
@@ -109,14 +112,13 @@ def fit_vertices(input_dict: dict, cfg: dict):
     LR = cfg['lr']
     STOP_AT_LOSS_VALUE = float(cfg["stop_at_loss_value"])
     STOP_AT_LOSS_DIFFERENCE = float(cfg["stop_at_loss_difference"])
-    A = initialize_A(template_vertices_N, cfg["random_init_A"])
-    A = A.cuda()
+    A = initialize_A(template_vertices_N, cfg["random_init_A"], device)
     optimizer = torch.optim.LBFGS([A], lr=LR)
     loss_func = losses.Losses(cfg, cfg["loss_weights"])
     transform_points = rotate_points_homo
 
-    loss_current = torch.Tensor([10]).cuda()
-    loss_previous = torch.Tensor([100]).cuda()
+    loss_current = torch.Tensor([10]).to(device)
+    loss_previous = torch.Tensor([100]).to(device)
     global closure_call
     closure_call = 0
     closure_calls = []
